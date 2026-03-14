@@ -1,4 +1,5 @@
 #lang racket
+(require (lib "trace.ss"))
 (require racket/match)
 
 (provide (all-defined-out))
@@ -35,14 +36,14 @@
 ; Obs: la definirea structurii counter se creează automat
 ; o funcție make-counter pentru a construi date de acest tip
 (define (empty-counter index)
-  'your-code-here)
+  (make-counter index 0 '()))
 
 
 ; TODO 2 (10p)
 ; Implementați o funcție care crește tt-ul unei case
 ; cu un număr dat de minute.
 (define (tt+ C minutes)
-  'your-code-here)
+  (struct-copy counter C [tt (+ (counter-tt C) minutes)]))
 
 
 ; TODO 3 (20p)
@@ -55,8 +56,28 @@
 ; RESTRICȚII (20p):
 ;  - Folosiți recursivitate pe coadă.
 (define (min-tt counters)
-  'your-code-here)
+  ; ordonez lista counters crescator dupa indecsi (cazurile 3d, 3e, 3f)
+  (define sorted-counters (sort counters < #:key counter-index))
+  (define (min-tt-helper remaining-counters fastest-so-far)
+    ; fastest-so-far e acumulatorul - este o pereche (index . tt), cu car iau index, cu cdr iau tt
+    (if (null? remaining-counters)            ; cazul de baza
+        fastest-so-far                        ; returnez acumulatorul
+        (if (< (counter-tt (car remaining-counters)) (cdr fastest-so-far)) 
+            ; then
+            (min-tt-helper (cdr remaining-counters) (cons (counter-index (car remaining-counters)) 
+                                                          (counter-tt (car remaining-counters))))
+            ; else pastrez vechiul acc
+            (min-tt-helper (cdr remaining-counters) fastest-so-far))))
 
+  ; pornesc helper-ul cu restul listei si prima casa ca punct de start
+  (min-tt-helper (cdr sorted-counters) (cons (counter-index (car sorted-counters))
+                                             (counter-tt (car sorted-counters)))))
+
+; Definim casele de marcat cu indexul respectiv și timp 0
+(define C1 (make-counter 1 0 '()))
+(define C2 (make-counter 2 0 '()))
+(define C3 (make-counter 3 0 '()))
+(define C4 (make-counter 4 0 '()))
 
 ; TODO 4 (20p)
 ; Implementați aceeași funcționalitate de mai sus,
@@ -64,8 +85,20 @@
 ; RESTRICȚII (20p):
 ;  - Folosiți recursivitate pe stivă.
 (define (min-tt-stack counters)
-  'your-code-here)
+  (define sorted-counters (sort counters < #:key counter-index))
+  (if (null? (cdr sorted-counters))
+           ; then
+           ; caz de baza - o singura casa
+           (cons (counter-index (car sorted-counters)) (counter-tt (car sorted-counters)))
+           ; else
+           (if (<= (counter-tt (car sorted-counters)) (cdr (min-tt-stack (cdr sorted-counters))))
+               ; then
+               ; daca timpul primei case e mai buna decat timpul cel mai bun din rest
+               (cons (counter-index (car sorted-counters)) (counter-tt (car sorted-counters)))
+               ;else
+               (min-tt-stack (cdr sorted-counters)))))
 
+(trace min-tt-stack)
 
 ; TODO 5 (10p)
 ; Implementați o funcție care adaugă o persoană la o casă.
