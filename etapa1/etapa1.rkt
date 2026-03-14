@@ -1,5 +1,6 @@
 #lang racket
 (require (lib "trace.ss"))
+(require racket/trace)
 (require racket/match)
 
 (provide (all-defined-out))
@@ -56,28 +57,28 @@
 ; RESTRICȚII (20p):
 ;  - Folosiți recursivitate pe coadă.
 (define (min-tt counters)
-  ; ordonez lista counters crescator dupa indecsi (cazurile 3d, 3e, 3f)
-  (define sorted-counters (sort counters < #:key counter-index))
-  (define (min-tt-helper remaining-counters fastest-so-far)
-    ; fastest-so-far e acumulatorul - este o pereche (index . tt), cu car iau index, cu cdr iau tt
-    (if (null? remaining-counters)            ; cazul de baza
-        fastest-so-far                        ; returnez acumulatorul
-        (if (< (counter-tt (car remaining-counters)) (cdr fastest-so-far)) 
+  (min-tt-helper (cdr counters) (car counters)))
+
+; definesc functia min-tt-helper cu 2 argumente: restul listei si prima casa ca best-so-far
+(define (min-tt-helper remaining-counters best-so-far)
+    ; fastest-so-far e acumulatorul - este o strucutra counter cu campurile definite mai sus
+    (if (null? remaining-counters)                 ; cazul de baza
+        ; then
+        (cons (counter-index best-so-far) (counter-tt best-so-far))
+        ;else
+        ; verific daca prima casa din lista remaining-counters e mai buna decat ce am in acumulator
+        (if (better-counter? (car remaining-counters) best-so-far)
             ; then
-            (min-tt-helper (cdr remaining-counters) (cons (counter-index (car remaining-counters)) 
-                                                          (counter-tt (car remaining-counters))))
+            (min-tt-helper (cdr remaining-counters) (car remaining-counters))
             ; else pastrez vechiul acc
-            (min-tt-helper (cdr remaining-counters) fastest-so-far))))
+            (min-tt-helper (cdr remaining-counters) best-so-far))))
 
-  ; pornesc helper-ul cu restul listei si prima casa ca punct de start
-  (min-tt-helper (cdr sorted-counters) (cons (counter-index (car sorted-counters))
-                                             (counter-tt (car sorted-counters)))))
+; whishful thinking - mi-am imaginat functia better-counter care nu exista, dar va fi implementata acum
+(define (better-counter? C1 C2)
+  (or (< (counter-tt C1) (counter-tt C2))
+      (and (= (counter-tt C1) (counter-tt C2))
+           (< (counter-index C1) (counter-index C2)))))
 
-; Definim casele de marcat cu indexul respectiv și timp 0
-(define C1 (make-counter 1 0 '()))
-(define C2 (make-counter 2 0 '()))
-(define C3 (make-counter 3 0 '()))
-(define C4 (make-counter 4 0 '()))
 
 ; TODO 4 (20p)
 ; Implementați aceeași funcționalitate de mai sus,
@@ -85,18 +86,26 @@
 ; RESTRICȚII (20p):
 ;  - Folosiți recursivitate pe stivă.
 (define (min-tt-stack counters)
-  (define sorted-counters (sort counters < #:key counter-index))
-  (if (null? (cdr sorted-counters))
-           ; then
-           ; caz de baza - o singura casa
-           (cons (counter-index (car sorted-counters)) (counter-tt (car sorted-counters)))
+  (if (null? (cdr counters))
+           ; then - cazul de baza - o singura casa - o transform in pereche (index . tt)
+           (cons (counter-index (car counters)) (counter-tt (car counters)))
            ; else
-           (if (<= (counter-tt (car sorted-counters)) (cdr (min-tt-stack (cdr sorted-counters))))
-               ; then
-               ; daca timpul primei case e mai buna decat timpul cel mai bun din rest
-               (cons (counter-index (car sorted-counters)) (counter-tt (car sorted-counters)))
+           (if (or (< (counter-tt (car counters)) (cdr (min-tt-stack (cdr counters))))
+                   (and (= (counter-tt (car counters)) (cdr (min-tt (cdr counters))))
+                        (< (counter-index (car counters)) (car (min-tt (cdr counters))))))
+               ;then
+               (cons (counter-index (car counters)) (counter-tt (car counters)))
                ;else
-               (min-tt-stack (cdr sorted-counters)))))
+               (min-tt (cdr counters)))))
+    
+               ; daca timpul primei case e mai buna decat timpul cel mai bun din rest
+               
+(define C1 (make-counter 1 10 '()))
+(define C2 (make-counter 2 5 '()))  ; Cea mai rapidă
+(define C3 (make-counter 3 8 '()))
+(define list-case (list C1 C2 C3))
+
+(trace min-tt-helper)
 
 (trace min-tt-stack)
 
