@@ -1,6 +1,4 @@
 #lang racket
-(require (lib "trace.ss"))
-(require racket/trace)
 (require racket/match)
 
 (provide (all-defined-out))
@@ -73,7 +71,7 @@
             ; else pastrez vechiul acc
             (min-tt-helper (cdr remaining-counters) best-so-far))))
 
-; whishful thinking - mi-am imaginat functia better-counter care nu exista, dar va fi implementata acum
+; wishful thinking - mi-am imaginat functia better-counter care nu exista, dar va fi implementata acum
 (define (better-counter? C1 C2)
   (or (< (counter-tt C1) (counter-tt C2))
       (and (= (counter-tt C1) (counter-tt C2))
@@ -91,23 +89,13 @@
            (cons (counter-index (car counters)) (counter-tt (car counters)))
            ; else
            (if (or (< (counter-tt (car counters)) (cdr (min-tt-stack (cdr counters))))
-                   (and (= (counter-tt (car counters)) (cdr (min-tt (cdr counters))))
-                        (< (counter-index (car counters)) (car (min-tt (cdr counters))))))
+                   (and (= (counter-tt (car counters)) (cdr (min-tt-stack (cdr counters))))
+                        (< (counter-index (car counters)) (car (min-tt-stack (cdr counters))))))
                ;then
                (cons (counter-index (car counters)) (counter-tt (car counters)))
                ;else
-               (min-tt (cdr counters)))))
-    
-               ; daca timpul primei case e mai buna decat timpul cel mai bun din rest
-               
-(define C1 (make-counter 1 10 '()))
-(define C2 (make-counter 2 5 '()))  ; Cea mai rapidă
-(define C3 (make-counter 3 8 '()))
-(define list-case (list C1 C2 C3))
+               (min-tt-stack (cdr counters)))))
 
-(trace min-tt-helper)
-
-(trace min-tt-stack)
 
 ; TODO 5 (10p)
 ; Implementați o funcție care adaugă o persoană la o casă.
@@ -115,8 +103,13 @@
 ; n-items = numărul de produse cumpărate
 ; Veți întoarce o nouă structură obținută prin așezarea perechii
 ; (name . n-items) la sfârșitul cozii de așteptare.
+
+; desfac casa cu match, iau coada de clienti si adaug noua persoana la final + updatez timpul
+
 (define (add-to-counter C name n-items)
-  'your-code-here)
+  (match C [(counter i tt q) (make-counter i
+                                           (+ tt n-items)
+                                           (append q (list (cons name n-items))))]))
 
 
 ; TODO 6 (50p)
@@ -130,7 +123,21 @@
 ;   (conform logicii implementate de min-tt)
 ; - când o casă suferă o întârziere, tt-ul ei crește
 (define (serve requests C1 C2 C3 C4)
-  
+  (define (choose-counter-and-place-client remaining-requests name n-items C1 C2 C3 C4)
+    (place-client-at-counter remaining-requests name n-items C1 C2 C3 C4 (car (min-tt (if (<= n-items ITEMS)
+                                                                                          ; then
+                                                                                          (list C1 C2 C3 C4)
+                                                                                          ; else
+                                                                                          (list C2 C3 C4))))))
+
+  (define (place-client-at-counter remaining-req name n-items C1 C2 C3 C4 best-index)
+    (cond
+      [(= best-index 1) (serve remaining-req (add-to-counter C1 name n-items) C2 C3 C4)]
+      [(= best-index 2) (serve remaining-req C1 (add-to-counter C2 name n-items) C3 C4)]
+      [(= best-index 3) (serve remaining-req C1 C2 (add-to-counter C3 name n-items) C4)]
+      [(= best-index 4) (serve remaining-req C1 C2 C3 (add-to-counter C4 name n-items))]))
+
+
   ; Puteți să vă definiți aici funcții ajutătoare (define în define)
   ; - avantaj: aveți acces la variabilele
   ;   requests, C1, C2, C3, C4 fără a le retrimite ca parametri
@@ -139,7 +146,21 @@
   ; Nu este obligatoriu să definiți funcții ajutătoare.
 
   (if (null? requests)
+      ; then:
       (list C1 C2 C3 C4)
+      ; else:
       (match (car requests)
-        [(list 'delay index minutes) 'your-code-here]
-        [(list name n-items) 'your-code-here])))
+        ; tipul 1 - (delay <index> <minutes>)
+        [(list 'delay index minutes) (cond
+                                       [(= index 1) (serve (cdr requests) (tt+ C1 minutes) C2 C3 C4)]
+                                       [(= index 2) (serve (cdr requests) C1 (tt+ C2 minutes) C3 C4)]
+                                       [(= index 3) (serve (cdr requests) C1 C2 (tt+ C3 minutes) C4)]
+                                       [(= index 4) (serve (cdr requests) C1 C2 C3 (tt+ C4 minutes))])]
+
+        ; tipul 2 - (<name> <n-items>)
+        [(list name n-items) (choose-counter-and-place-client (cdr requests) name n-items C1 C2 C3 C4)])))
+
+
+; (match obiect-de-potrivit
+;      [tipar-1    corp-1]
+;      [tipar-2    corp-2])
