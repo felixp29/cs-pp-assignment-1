@@ -23,7 +23,7 @@
 ; TODO 1 (5p)
 ; Actualizați implementarea empty-counter astfel încât să conțină și câmpul et.
 (define (empty-counter index)
-  'your-code-here)
+  (make-counter index 0 0 '()))
 
 
 ; TODO 2 (15p)
@@ -36,8 +36,16 @@
 ; Dacă nu există în counters o casă cu acest index,
 ; întoarceți lista nemodificată.
 (define (update f counters index)
-  'your-code-here)
-
+  (map (λ (C) (if (= (counter-index C) index)
+            ; then
+            (f C)     ; aplic transformarea f pe casa C daca am gasit indexul
+            ; else
+            C))        ; nu am indexul -> las casa nemodificata
+       counters))
+; counters este argumentul functiei map
+; C (cate un element din counters, pe rand) = argumentul functiei anonime λ
+; map imi despacheteaza lista counters si verifica pt fiecare element al listei
+; map imi face impachetarea inapoi in lista
 
 ; TODO 3 (7.5p)
 ; Memento: tt+ crește tt-ul unei case cu un număr de minute.
@@ -59,11 +67,18 @@
 ; poate fi testată, acesta este singurul său rol.
 ; RESTRICȚII (5p)
 ;  - Implementați tt+ conform cerinței anterioare.
-(define tt+
-  'your-code-here)
+(define ((tt+ minutes) C)
+  (struct-copy counter C [tt (+ (counter-tt C) minutes)]))
+
+; am inversat ordinea parametrilor fata de etapa 1 (acum minutes e primul)
+; pentru ca prelucrez parametrul minutes in aceasta functie si rezultatul
+; (tot o functie care asteapta alt argument) il pasez mai departe
+; deci functia tt+ imi permite aplicare partiala
+; am facut asta definind functia tt+ in stil curry ((tt+ minutes) C)
+
 
 (define (checker-tt+ C minutes)
-  'your-code-here)
+  ((tt+ minutes) C))
 
 
 ; TODO 4 (7.5p)
@@ -75,11 +90,14 @@
 ; et+, pentru testare.
 ; RESTRICȚII (5p)
 ;  - Implementați et+ conform cerinței anterioare.
-(define et+
-  'your-code-here)
+(define ((et+ minutes) C)
+  (struct-copy counter C [et (+ (counter-et C) minutes)]))
 
+; struct-copy pentru ca trebuie sa creez o noua casa ca sa ii actualizez et-ul,
+; nu ii modific et-ul casei existente (imutabilitate)
+                        
 (define (checker-et+ C minutes)
-  'your-code-here)
+  ((et+ minutes) C))
 
 
 ; TODO 5 (10p)
@@ -92,11 +110,22 @@
 ; care apelează add-to-counter, pentru testare.
 ; RESTRICȚII (5p)
 ;  - Implementați add-to-counter conform cerinței anterioare.
-(define add-to-counter
-  'your-code-here)
+(define (add-to-counter name n-items)
+  (match-lambda
+    [(counter index tt et queue) (if (null? queue)
+                                     ; caz 1: casa e goala tt creste, et devine et-ul actual + n-items, queue are un om - cel tocmai adaugat
+                                     (make-counter index (+ tt n-items) (+ et n-items) (list (cons name n-items)))
+         
+                                     ; caz 2: casa are oameni, tt creste, et neschimbat, omul e pus la final de queue
+                                     (make-counter index (+ tt n-items) et (append queue (list (cons name n-items)))))]))
+
+; (match-lambda
+;    [pattern-1    corp-1]
+;    [pattern-2    corp-2]
+;    ...)
 
 (define (checker-add-to-counter C name n-items)
-  'your-code-here)
+  ((add-to-counter name n-items) C))
 
 
 ; TODO 6 (15p)
@@ -112,11 +141,20 @@
 ; Obs: în etapele 2-4, listele de case sunt sortate după index.
 ; RESTRICȚII (10p - 2*5p)
 ;  - min-tt și min-et vor fi aplicații parțiale ale funcției abstracte.
-(define functie-mai-abstracta-careia-ii-veti-da-un-nume-sugestiv
-  'your-code-here)
+(define (min-by-field field) ; field va fi campul tt sau et din counter
+  (λ (counters)
+    (define (find-min remaining best-so-far)
+      (if (null? remaining)
+          best-so-far
+          (if (< (field (car remaining)) (cdr best-so-far))
+              (find-min (cdr remaining) (cons (counter-index (car remaining)) (field (car remaining))))
+              (find-min (cdr remaining) best-so-far))))
 
-(define min-tt 'your-code-here) ; folosind funcția de mai sus
-(define min-et 'your-code-here) ; folosind funcția de mai sus
+    (find-min (cdr counters) (cons (counter-index (car counters)) (field (car counters))))))
+                        
+
+(define min-tt (min-by-field counter-tt)) ; folosind funcția de mai sus
+(define min-et (min-by-field counter-et)) ; folosind funcția de mai sus
 
 
 ; TODO 7 (10p)
@@ -130,8 +168,19 @@
 ; Dacă o casă tocmai a fost părăsită de cineva,
 ; înseamnă că ea nu mai are întârzieri.
 (define (remove-first-from-counter C)
-  'your-code-here)
-    
+  (match C
+    [(counter index _ _ (cons _ rest-queue)) (if (null? rest-queue)
+                                                 ; cazul in care ramane goala
+                                                 (make-counter index 0 0 '())
+                                                 ; cazul in care mai raman oameni: calculez noile valori direct
+                                                 (make-counter index
+                                                               (apply + (map cdr rest-queue)) ; noul tt: suma produselor ramase
+                                                               (cdr (car rest-queue)) ; noul et: produsele celui de-al doilea om
+                                                               rest-queue))]))
+            
+; (match obiect-de-potrivit
+;      [tipar-1    corp-1]
+;      [tipar-2    corp-2])
 
 ; TODO 8 (50p)
 ; Implementați funcția care simulează fluxul clienților pe la case.
@@ -169,9 +218,62 @@
 (define (serve requests fast-counters slow-counters)
   (if (null? requests)
       (append fast-counters slow-counters)
-      'your-matches-here))
+      (match (car requests)
+        
+        ; 2. urmatoarea cerere din lista requests - intarzierile
+        [(list 'delay index minutes)
+         (if (<= index (length fast-counters))
+             (serve (cdr requests)
+                    (update (et+ minutes) (update (tt+ minutes) fast-counters index) index)
+                    slow-counters)
+             (serve (cdr requests)
+                    fast-counters
+                    (update (et+ minutes) (update (tt+ minutes) slow-counters index) index)))]
 
+        ; 3. plecarea clientului
+        [(list 'remove-first)
+         ; folosesc filter pt a gasi casele cu persoane
+         (if (null? (filter (match-lambda [(counter _ _ _ q) (not (null? q))]) (append fast-counters slow-counters)))
+             ; trec peste daca toate casele sunt goale
+             (serve (cdr requests) fast-counters slow-counters)
+             ; else caut indexul cu et cel mai mic
+             (if (<= (car (min-et (filter (match-lambda [(counter _ _ _ q) (not (null? q))]) (append fast-counters slow-counters)))) (length fast-counters))
+                 (serve (cdr requests) (update remove-first-from-counter fast-counters (car (min-et (filter (match-lambda [(counter _ _ _ q) (not (null? q))]) (append fast-counters slow-counters))))) slow-counters)
+                 (serve (cdr requests) fast-counters (update remove-first-from-counter slow-counters (car (min-et (filter (match-lambda [(counter _ _ _ q) (not (null? q))]) (append fast-counters slow-counters))))))))]
 
-            
-           
+        ; 4. ensure
+        [(list 'ensure average)
+         (if (> (/ (apply + (map counter-tt (append fast-counters slow-counters)))
+                   (length (append fast-counters slow-counters)))
+                average)
+             ; media e mai mare decat average, adaug o casa si reprocesez aceeasi cerere
+             (serve requests
+                    fast-counters
+                    (append slow-counters (list (make-counter(+ 1 (length (append fast-counters slow-counters))) 0 0 '()))))
+             ; media e mai mica
+             (serve (cdr requests) fast-counters slow-counters))]
+
+        ; 1. asez persoana la casa
+        [(list name n-items)
+         (if (<= n-items ITEMS)
+             ; are mai putine produse decat ITEMS -> poate merge la oricce casa
+             ; caut casa cu tt cel mai mic dintre toate
+             (if (<= (car (min-tt (append fast-counters slow-counters))) (length fast-counters))
+                 ; merge la o casa fast
+                 (serve (cdr requests)
+                        (update (add-to-counter name n-items) fast-counters (car (min-tt (append fast-counters slow-counters))))
+                        slow-counters)
+                 ; merge la o casa slow
+                 (serve (cdr requests)
+                        fast-counters
+                        (update (add-to-counter name n-items) slow-counters (car (min-tt (append fast-counters slow-counters))))))
+             ; are mai multe produse decat ITEMS -> merge la un slow counter
+             (serve (cdr requests)
+                    fast-counters
+                    (update (add-to-counter name n-items) slow-counters (car (min-tt slow-counters)))))])))
+
+; l-am pus pe 1. la final deoarece daca (list name n-items) era la inceputul match-ului ar fi luat si
+; cererea (ensure x) ca fiind un client
+; ordinea de procesare a cererilor e asigurata de (car requests)
+; ordinea clauzelor din match previne incurcarea lui ensure cu numele clientilor
 
