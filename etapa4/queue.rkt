@@ -78,13 +78,14 @@
 ; TODO 1 (5p)
 ; Definiți valoarea care reprezintă o coadă goală.
 (define empty-queue
-  'your-code-here)
+  (make-queue empty-stream '() 0 0))
 
 
 ; TODO 2 (5p)
 ; Implementați o funcție care verifică dacă o coadă este goală.
 (define (queue-empty? q)
-  'your-code-here)
+  (zero?(queue-size-l q)))
+; daca stanga e goala, toata coada e goala (conform invariantului size(left) ≥ size(right))
 
 
 ; TODO 3 (10p)
@@ -116,4 +117,4 @@
 ; dintr-o coadă nevidă. Întoarceți elementul.
 ; Obs: top pe coada vidă este firesc să dea eroare.
 (define (top q)
-  'your-code-here)
+  (stream-first (queue-left q)))

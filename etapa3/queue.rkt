@@ -56,33 +56,79 @@
 ; TODO 1 (5p)
 ; Definiți valoarea care reprezintă o coadă goală.
 (define empty-queue
-  'your-code-here)
+  (make-queue '() '() 0 0))
 
 
 ; TODO 2 (5p)
 ; Implementați o funcție care verifică dacă o coadă este goală.
 (define (queue-empty? q)
-  'your-code-here)
+  (if (and (= (queue-size-l q) 0) (= (queue-size-r q) 0))
+      #t
+      #f))
 
 
 ; TODO 3 (5p)
 ; Implementați o funcție care adaugă un element la
 ; sfârșitul unei cozi. Întoarceți coada actualizată.
 (define (enqueue x q)
-  'your-code-here)
+  (make-queue (queue-left q)
+              (cons x (queue-right q)) ; adaug x la varful stivei din dreapta (inceputul listei drepte)
+              (queue-size-l q) ; dim stivei stangi ramane aceeasi
+              (+ 1 (queue-size-r q)))) ; incrementez cu 1 dim stivei drepte (pt ca tocmai am adaugat un elem
+              
+; queue-left = imi da stiva (lista) din stanga
+; queue-right = imi da stiva (lista) din dreapta
 
+; cand apelez enqueue cu argumentul q, ii dau tot ce are q in el pt ca e de tip queue
+; accesez ce e in queue queue-left, queue-right, queue-size-l, queue-size-r 
+
+
+#|
+
+Pentru task-urile urmatoare am creat functia ajutatoare (prepare-queue) care verifica
+daca coada e dezechilibrata, adica toate elementele din left s-au terminat si daca are
+elemente in right le muta inversate in left si imi intoarce o coada valida care sigur
+are clienti in stiva stanga
+
+|#
+
+(define (prepare-queue q)
+  (if (zero? (queue-size-l q))
+      (make-queue (reverse (queue-right q)) ; fac reverse la stiva dreapta pt ca
+                  ; primul venit sa fie primul servit (principiul cozii FIFO)
+                  '()
+                  (queue-size-r q)
+                  0)
+      q)) ; daca are deja elemente in left o las asa
+    
 
 ; TODO 4 (10p)
 ; Implementați o funcție care scoate primul element
 ; dintr-o coadă nevidă. Întoarceți coada actualizată.
 ; Obs: dequeue pe coada vidă este firesc să dea eroare.
-(define (dequeue q)
-  'your-code-here)
-
+(define (dequeue q)                        ; acum stiu sigur ca ready-q are are oameni in stiva stanga, doar operez
+  (let ((ready-q (prepare-queue q)))       ; cu ea nu mai fac verificare si transfer dr->stg (separarea responsabilitatilor)
+    (make-queue (cdr (queue-left ready-q)) ; actualizez stiva stanga - fara primul om
+                (queue-right ready-q)      ; stiva dreapta ramane neschimba
+                (- (queue-size-l ready-q) 1) ; scad cu 1 marimea stivei stangi (omul care a plecat)
+                (queue-size-r ready-q))))  ; marimea stivei drepte ramane la fel
+                
 
 ; TODO 5 (5p)
 ; Implementați o funcție care obține primul element
 ; dintr-o coadă nevidă. Întoarceți elementul.
 ; Obs: top pe coada vidă este firesc să dea eroare.
 (define (top q)
-  'your-code-here)
+  (let ((ready-q (prepare-queue q)))  ; evalueaza (prepare-queue q) si rezultatului (o coada) spune-i ready-q
+        (car (queue-left ready-q))))  ; corpul lui let. ia coada ready-q, scoate lista stanga si da-mi primul element
+
+#| let syntax
+
+(let ([id val-expr] ...) body ...+)
+
+> (let ([x 5]) x)
+5
+
+|#
+
+

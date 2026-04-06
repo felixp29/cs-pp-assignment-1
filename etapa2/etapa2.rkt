@@ -256,7 +256,7 @@
         ; 1. asez persoana la casa
         [(list name n-items)
          (if (<= n-items ITEMS)
-             ; are mai putine produse decat ITEMS -> poate merge la oricce casa
+             ; are mai putine produse decat ITEMS -> poate merge la orice casa
              ; caut casa cu tt cel mai mic dintre toate
              (if (<= (car (min-tt (append fast-counters slow-counters))) (length fast-counters))
                  ; merge la o casa fast
